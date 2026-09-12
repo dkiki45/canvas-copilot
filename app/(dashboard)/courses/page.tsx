@@ -19,30 +19,32 @@ export default async function CoursesPage() {
   const hiddenCourses = courses.filter((course) => hiddenIds.has(String(course.id)));
 
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Meus cursos</h1>
-      {visibleCourses.length === 0 ? (
-        <p className="text-muted-foreground">Nenhum curso ativo encontrado.</p>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {visibleCourses.map((course) => (
-            <CourseCard key={course.id} course={course} />
-          ))}
-        </div>
-      )}
+    <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
+      <div className="flex flex-1 flex-col gap-6">
+        <h1 className="text-2xl font-semibold">Meus cursos</h1>
+        {visibleCourses.length === 0 ? (
+          <p className="text-muted-foreground">Nenhum curso ativo encontrado.</p>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {visibleCourses.map((course) => (
+              <CourseCard key={course.id} course={course} />
+            ))}
+          </div>
+        )}
+      </div>
 
-      {hiddenCourses.length > 0 && (
-        <details className="rounded-md border p-3">
-          <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
-            Cursos ocultos ({hiddenCourses.length})
-          </summary>
-          <ul className="mt-2 divide-y">
+      <aside className="w-full shrink-0 lg:w-64">
+        <h2 className="mb-3 text-sm font-medium text-muted-foreground">Cursos ocultos ({hiddenCourses.length})</h2>
+        {hiddenCourses.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhum curso oculto.</p>
+        ) : (
+          <ul className="flex flex-col divide-y rounded-md border">
             {hiddenCourses.map((course) => (
               <HiddenCourseRow key={course.id} course={course} />
             ))}
           </ul>
-        </details>
-      )}
+        )}
+      </aside>
     </div>
   );
 }

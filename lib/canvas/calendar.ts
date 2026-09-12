@@ -5,7 +5,7 @@ import type { CalendarEvent, Course } from "./types";
 const DEFAULT_RANGE_DAYS_BEFORE = 14;
 const DEFAULT_RANGE_DAYS_AFTER = 120;
 
-function isoDate(date: Date): string {
+export function isoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 

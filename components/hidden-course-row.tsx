@@ -18,9 +18,9 @@ export function HiddenCourseRow({ course }: { course: Course }) {
   }
 
   return (
-    <li className="flex items-center justify-between gap-4 py-1.5">
+    <li className="flex flex-col gap-2 p-3">
       <span className="text-sm text-muted-foreground">{course.name}</span>
-      <Button variant="outline" size="sm" onClick={handleShow} disabled={isPending}>
+      <Button variant="outline" size="sm" onClick={handleShow} disabled={isPending} className="self-start">
         Mostrar
       </Button>
     </li>

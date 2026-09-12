@@ -12,14 +12,6 @@ export interface Course {
   total_students?: number;
 }
 
-export interface TodoItem {
-  type: "submitting" | "grading";
-  assignment?: Assignment;
-  course_id: number;
-  html_url: string;
-  needs_grading_count?: number;
-}
-
 export interface Assignment {
   id: number;
   name: string;

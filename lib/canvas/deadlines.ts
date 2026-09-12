@@ -4,19 +4,25 @@ import { listAssignmentsForCourse } from "./assignments";
 import { getSubmissionSelf } from "./submissions";
 import type { Course, DeadlineItem } from "./types";
 
-const PAST_WINDOW_DAYS = 14;
-const FUTURE_WINDOW_DAYS = 30;
+export interface DeadlineWindow {
+  /** null = sem limite inferior (inclui atividades atrasadas de qualquer data). */
+  start: Date | null;
+  end: Date;
+}
 
 /**
- * Cruza assignments de todos os cursos (visíveis) num painel único, com status
- * de entrega, para dar uma visão real de "o que falta fazer" sem precisar
- * entrar curso por curso. Escopo limitado a uma janela de datas para não
- * disparar uma chamada de submissão por atividade já concluída há meses.
+ * Cruza assignments de todos os cursos (visíveis) com o status de entrega, numa
+ * janela de datas configurável. Só busca status de submissão para atividades
+ * com prazo definido dentro da janela, pra não disparar uma chamada por
+ * atividade já concluída há anos.
  */
-export async function getUpcomingDeadlines(creds: CanvasCredentials, courses: Course[]): Promise<DeadlineItem[]> {
-  const now = Date.now();
-  const windowStart = now - PAST_WINDOW_DAYS * 24 * 60 * 60 * 1000;
-  const windowEnd = now + FUTURE_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+export async function getDeadlinesInRange(
+  creds: CanvasCredentials,
+  courses: Course[],
+  window: DeadlineWindow,
+): Promise<DeadlineItem[]> {
+  const windowStart = window.start?.getTime() ?? -Infinity;
+  const windowEnd = window.end.getTime();
 
   const perCourseAssignments = await Promise.all(
     courses.map(async (course) => {
@@ -53,17 +59,17 @@ export async function getUpcomingDeadlines(creds: CanvasCredentials, courses: Co
   );
 }
 
-/** Separa prazos em atrasados (não entregues) e próximos. */
-export function splitDeadlines(items: DeadlineItem[]): { overdue: DeadlineItem[]; upcoming: DeadlineItem[] } {
-  const now = Date.now();
-  const overdue = items.filter(
-    (item) =>
-      new Date(item.assignment.due_at as string).getTime() < now &&
-      item.submission?.workflow_state !== "submitted" &&
-      item.submission?.workflow_state !== "graded",
-  );
-  const overdueIds = new Set(overdue.map((item) => item.assignment.id));
-  const upcoming = items.filter((item) => !overdueIds.has(item.assignment.id));
+/** Considera "entregue" qualquer submissão já enviada, mesmo que ainda não corrigida. */
+export function isSubmitted(item: DeadlineItem): boolean {
+  const state = item.submission?.workflow_state;
+  return state === "submitted" || state === "graded" || state === "pending_review";
+}
 
-  return { overdue, upcoming };
+export function startOfToday(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
+export function daysFromNow(days: number): Date {
+  return new Date(Date.now() + days * 24 * 60 * 60 * 1000);
 }

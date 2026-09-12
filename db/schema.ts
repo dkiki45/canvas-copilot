@@ -46,3 +46,16 @@ export const hiddenCourses = pgTable(
   },
   (t) => [unique().on(t.userId, t.canvasCourseId)],
 );
+
+export const courseVisits = pgTable(
+  "course_visits",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    canvasCourseId: text("canvas_course_id").notNull(),
+    visitedAt: timestamp("visited_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [unique().on(t.userId, t.canvasCourseId)],
+);

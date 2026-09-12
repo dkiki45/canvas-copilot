@@ -2,9 +2,13 @@ import { redirect } from "next/navigation";
 import { getSessionUserId } from "@/lib/session";
 import { getDecryptedCredentialsForUser } from "@/lib/credentials";
 import { getHiddenCourseIds } from "@/lib/hidden-courses";
+import { getRecentCourseIds } from "@/lib/course-visits";
 import { listCourses } from "@/lib/canvas/courses";
-import { getUpcomingDeadlines, splitDeadlines } from "@/lib/canvas/deadlines";
+import { getDeadlinesInRange, isSubmitted, startOfToday, daysFromNow } from "@/lib/canvas/deadlines";
+import { RecentCourseCard } from "@/components/recent-course-card";
 import { DeadlineItem } from "@/components/deadline-item";
+
+const UPCOMING_WINDOW_DAYS = 30;
 
 export default async function PainelPage() {
   const userId = await getSessionUserId();
@@ -13,34 +17,59 @@ export default async function PainelPage() {
   const credentials = await getDecryptedCredentialsForUser(userId);
   if (!credentials) redirect("/onboarding");
 
-  const [courses, hiddenIds] = await Promise.all([listCourses(credentials), getHiddenCourseIds(userId)]);
-  const visibleCourses = courses.filter((course) => !hiddenIds.has(String(course.id)));
+  const [courses, hiddenIds, recentIds] = await Promise.all([
+    listCourses(credentials),
+    getHiddenCourseIds(userId),
+    getRecentCourseIds(userId, 3),
+  ]);
 
-  const deadlines = await getUpcomingDeadlines(credentials, visibleCourses);
-  const { overdue, upcoming } = splitDeadlines(deadlines);
+  const visibleCourses = courses.filter((course) => !hiddenIds.has(String(course.id)));
+  const recentCourses = recentIds
+    .map((id) => visibleCourses.find((course) => String(course.id) === id))
+    .filter((course) => course != null);
+
+  const deadlines = await getDeadlinesInRange(credentials, visibleCourses, {
+    start: startOfToday(),
+    end: daysFromNow(UPCOMING_WINDOW_DAYS),
+  });
+  const naoEntregues = deadlines.filter((item) => !isSubmitted(item));
+  const entregues = deadlines.filter((item) => isSubmitted(item));
 
   return (
     <div className="flex flex-col gap-8">
       <h1 className="text-2xl font-semibold">Painel</h1>
 
-      {overdue.length > 0 && (
+      {recentCourses.length > 0 && (
         <section className="flex flex-col gap-3">
-          <h2 className="text-lg font-medium text-destructive">Atrasadas</h2>
-          <div className="flex flex-col gap-2">
-            {overdue.map((item) => (
-              <DeadlineItem key={`${item.courseId}-${item.assignment.id}`} item={item} />
+          <h2 className="text-lg font-medium">Cursos recentes</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {recentCourses.map((course) => (
+              <RecentCourseCard key={course.id} course={course} />
             ))}
           </div>
         </section>
       )}
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-medium">Próximos prazos</h2>
-        {upcoming.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhum prazo nos próximos 30 dias.</p>
+        <h2 className="text-lg font-medium">Não entregues</h2>
+        {naoEntregues.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nada pendente nos próximos {UPCOMING_WINDOW_DAYS} dias.</p>
         ) : (
           <div className="flex flex-col gap-2">
-            {upcoming.map((item) => (
+            {naoEntregues.map((item) => (
+              <DeadlineItem key={`${item.courseId}-${item.assignment.id}`} item={item} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="text-lg font-medium">Entregues</h2>
+        {entregues.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhuma entrega nos próximos {UPCOMING_WINDOW_DAYS} dias.</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {entregues.map((item) => (
               <DeadlineItem key={`${item.courseId}-${item.assignment.id}`} item={item} />
             ))}
           </div>

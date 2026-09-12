@@ -4,6 +4,7 @@ import { getSessionUserId } from "@/lib/session";
 import { getDecryptedCredentialsForUser } from "@/lib/credentials";
 import { getGradesForCourse } from "@/lib/canvas/enrollments";
 import { listAssignmentsForCourse } from "@/lib/canvas/assignments";
+import { recordCourseVisit } from "@/lib/course-visits";
 import { GradeTable } from "@/components/grade-table";
 
 export default async function CourseDetailPage({ params }: { params: Promise<{ courseId: string }> }) {
@@ -14,6 +15,8 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ c
 
   const credentials = await getDecryptedCredentialsForUser(userId);
   if (!credentials) redirect("/onboarding");
+
+  await recordCourseVisit(userId, courseId);
 
   const [enrollments, assignments] = await Promise.all([
     getGradesForCourse(credentials, Number(courseId)),
