@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
-import DOMPurify from "isomorphic-dompurify";
 import { getSessionUserId } from "@/lib/session";
 import { getDecryptedCredentialsForUser } from "@/lib/credentials";
 import { getAssignment } from "@/lib/canvas/assignments";
 import { getSubmissionSelf } from "@/lib/canvas/submissions";
+import { sanitizeAssignmentDescription } from "@/lib/canvas/sanitize-description";
 import { SubmissionStatusBadge } from "@/components/submission-status-badge";
 import { SubmitForm } from "./submit-form";
 
@@ -40,7 +40,9 @@ export default async function AssignmentDetailPage({
       {assignment.description && (
         <div
           className="prose prose-sm max-w-none"
-          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(assignment.description) }}
+          dangerouslySetInnerHTML={{
+            __html: sanitizeAssignmentDescription(assignment.description, credentials.baseUrl),
+          }}
         />
       )}
 
