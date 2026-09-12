@@ -7,3 +7,4 @@ export * from "./assignments";
 export * from "./submissions";
 export * from "./deadlines";
 export * from "./files";
+export * from "./grades";

@@ -5,8 +5,10 @@ import { getHiddenCourseIds } from "@/lib/hidden-courses";
 import { getRecentCourseIds } from "@/lib/course-visits";
 import { listCourses } from "@/lib/canvas/courses";
 import { getDeadlinesInRange, isSubmitted, daysFromNow } from "@/lib/canvas/deadlines";
+import { getConsolidatedGrades, computeAverageCurrentScore } from "@/lib/canvas/grades";
 import { RecentCourseCard } from "@/components/recent-course-card";
 import { DeadlineItem } from "@/components/deadline-item";
+import { GradesSummaryTable } from "@/components/grades-summary-table";
 
 const PENDING_WINDOW_DAYS = 30;
 
@@ -28,11 +30,12 @@ export default async function PainelPage() {
     .map((id) => visibleCourses.find((course) => String(course.id) === id))
     .filter((course) => course != null);
 
-  const deadlines = await getDeadlinesInRange(credentials, visibleCourses, {
-    start: null,
-    end: daysFromNow(PENDING_WINDOW_DAYS),
-  });
+  const [deadlines, gradeSummaries] = await Promise.all([
+    getDeadlinesInRange(credentials, visibleCourses, { start: null, end: daysFromNow(PENDING_WINDOW_DAYS) }),
+    getConsolidatedGrades(credentials, visibleCourses),
+  ]);
   const pending = deadlines.filter((item) => !isSubmitted(item));
+  const averageScore = computeAverageCurrentScore(gradeSummaries);
 
   return (
     <div className="flex flex-col gap-8">
@@ -60,6 +63,16 @@ export default async function PainelPage() {
             ))}
           </div>
         )}
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-lg font-medium">Notas</h2>
+          {averageScore != null && (
+            <p className="text-sm text-muted-foreground">Média geral: {averageScore.toFixed(1)}</p>
+          )}
+        </div>
+        <GradesSummaryTable summaries={gradeSummaries} />
       </section>
     </div>
   );
