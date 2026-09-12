@@ -4,6 +4,7 @@ import { getSessionUserId } from "@/lib/session";
 import { getDecryptedCredentialsForUser } from "@/lib/credentials";
 
 const NAV_ITEMS = [
+  { href: "/painel", label: "Painel" },
   { href: "/courses", label: "Cursos" },
   { href: "/todo", label: "Tarefas" },
   { href: "/calendar", label: "Calendário" },

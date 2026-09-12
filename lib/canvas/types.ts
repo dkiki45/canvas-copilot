@@ -72,3 +72,10 @@ export interface Submission {
   grade: string | null;
   attachments?: CanvasAttachment[];
 }
+
+export interface DeadlineItem {
+  assignment: Assignment;
+  courseId: number;
+  courseName: string;
+  submission: Submission | null;
+}

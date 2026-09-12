@@ -6,5 +6,5 @@ export default async function RootPage() {
   const userId = await getSessionUserId();
   const credentials = userId ? await getDecryptedCredentialsForUser(userId) : null;
 
-  redirect(credentials ? "/courses" : "/onboarding");
+  redirect(credentials ? "/painel" : "/onboarding");
 }
