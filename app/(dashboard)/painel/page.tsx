@@ -4,11 +4,11 @@ import { getDecryptedCredentialsForUser } from "@/lib/credentials";
 import { getHiddenCourseIds } from "@/lib/hidden-courses";
 import { getRecentCourseIds } from "@/lib/course-visits";
 import { listCourses } from "@/lib/canvas/courses";
-import { getDeadlinesInRange, isSubmitted, startOfToday, daysFromNow } from "@/lib/canvas/deadlines";
+import { getDeadlinesInRange, isSubmitted, daysFromNow } from "@/lib/canvas/deadlines";
 import { RecentCourseCard } from "@/components/recent-course-card";
 import { DeadlineItem } from "@/components/deadline-item";
 
-const UPCOMING_WINDOW_DAYS = 30;
+const PENDING_WINDOW_DAYS = 30;
 
 export default async function PainelPage() {
   const userId = await getSessionUserId();
@@ -29,11 +29,10 @@ export default async function PainelPage() {
     .filter((course) => course != null);
 
   const deadlines = await getDeadlinesInRange(credentials, visibleCourses, {
-    start: startOfToday(),
-    end: daysFromNow(UPCOMING_WINDOW_DAYS),
+    start: null,
+    end: daysFromNow(PENDING_WINDOW_DAYS),
   });
-  const naoEntregues = deadlines.filter((item) => !isSubmitted(item));
-  const entregues = deadlines.filter((item) => isSubmitted(item));
+  const pending = deadlines.filter((item) => !isSubmitted(item));
 
   return (
     <div className="flex flex-col gap-8">
@@ -51,25 +50,12 @@ export default async function PainelPage() {
       )}
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-medium">Não entregues</h2>
-        {naoEntregues.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nada pendente nos próximos {UPCOMING_WINDOW_DAYS} dias.</p>
+        <h2 className="text-lg font-medium">Pendências</h2>
+        {pending.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhuma pendência. 🎉</p>
         ) : (
           <div className="flex flex-col gap-2">
-            {naoEntregues.map((item) => (
-              <DeadlineItem key={`${item.courseId}-${item.assignment.id}`} item={item} />
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-medium">Entregues</h2>
-        {entregues.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhuma entrega nos próximos {UPCOMING_WINDOW_DAYS} dias.</p>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {entregues.map((item) => (
+            {pending.map((item) => (
               <DeadlineItem key={`${item.courseId}-${item.assignment.id}`} item={item} />
             ))}
           </div>

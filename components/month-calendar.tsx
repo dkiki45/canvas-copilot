@@ -1,6 +1,13 @@
-import type { CalendarEvent } from "@/lib/canvas/types";
+import Link from "next/link";
+import type { CalendarItem, CalendarItemKind } from "@/lib/canvas/types";
 
 const WEEKDAY_LABELS_PT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+const ITEM_STYLES: Record<CalendarItemKind, string> = {
+  event: "bg-primary/10 text-primary hover:bg-primary/20",
+  assignment: "bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 dark:text-amber-400",
+  quiz: "bg-red-500/10 text-red-700 hover:bg-red-500/20 dark:text-red-400 font-medium",
+};
 
 function getMonthGrid(year: number, month: number): (Date | null)[][] {
   const firstDay = new Date(year, month - 1, 1);
@@ -21,7 +28,11 @@ function isSameDay(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
-export function MonthCalendar({ year, month, events }: { year: number; month: number; events: CalendarEvent[] }) {
+function itemLabel(item: CalendarItem): string {
+  return item.kind === "quiz" ? `Prova: ${item.title}` : item.title;
+}
+
+export function MonthCalendar({ year, month, items }: { year: number; month: number; items: CalendarItem[] }) {
   const weeks = getMonthGrid(year, month);
   const today = new Date();
 
@@ -36,9 +47,7 @@ export function MonthCalendar({ year, month, events }: { year: number; month: nu
 
         {weeks.flatMap((week, weekIndex) =>
           week.map((date, dayIndex) => {
-            const dayEvents = date
-              ? events.filter((event) => event.start_at && isSameDay(new Date(event.start_at), date))
-              : [];
+            const dayItems = date ? items.filter((item) => isSameDay(new Date(item.start_at), date)) : [];
             const isToday = date != null && isSameDay(date, today);
 
             return (
@@ -49,20 +58,31 @@ export function MonthCalendar({ year, month, events }: { year: number; month: nu
                       {date.getDate()}
                     </p>
                     <div className="flex flex-col gap-0.5">
-                      {dayEvents.slice(0, 3).map((event) => (
-                        <a
-                          key={event.id}
-                          href={event.html_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title={event.title}
-                          className="truncate rounded bg-primary/10 px-1 py-0.5 text-[0.7rem] text-primary hover:bg-primary/20"
-                        >
-                          {event.title}
-                        </a>
-                      ))}
-                      {dayEvents.length > 3 && (
-                        <span className="text-[0.65rem] text-muted-foreground">+{dayEvents.length - 3} mais</span>
+                      {dayItems.slice(0, 3).map((item) =>
+                        item.external ? (
+                          <a
+                            key={item.id}
+                            href={item.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={item.title}
+                            className={`truncate rounded px-1 py-0.5 text-[0.7rem] ${ITEM_STYLES[item.kind]}`}
+                          >
+                            {itemLabel(item)}
+                          </a>
+                        ) : (
+                          <Link
+                            key={item.id}
+                            href={item.href}
+                            title={item.title}
+                            className={`truncate rounded px-1 py-0.5 text-[0.7rem] ${ITEM_STYLES[item.kind]}`}
+                          >
+                            {itemLabel(item)}
+                          </Link>
+                        ),
+                      )}
+                      {dayItems.length > 3 && (
+                        <span className="text-[0.65rem] text-muted-foreground">+{dayItems.length - 3} mais</span>
                       )}
                     </div>
                   </>

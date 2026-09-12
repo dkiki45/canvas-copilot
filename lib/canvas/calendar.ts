@@ -1,6 +1,6 @@
 import "server-only";
 import { canvasPaginated, type CanvasCredentials } from "./client";
-import type { CalendarEvent, Course } from "./types";
+import type { Assignment, CalendarEvent, CalendarItem, Course } from "./types";
 
 const DEFAULT_RANGE_DAYS_BEFORE = 14;
 const DEFAULT_RANGE_DAYS_AFTER = 120;
@@ -39,4 +39,26 @@ export async function listCalendarEvents(
       per_page: 50,
     },
   });
+}
+
+export function eventToCalendarItem(event: CalendarEvent): CalendarItem {
+  return {
+    id: `event-${event.id}`,
+    title: event.title,
+    start_at: event.start_at as string,
+    kind: "event",
+    href: event.html_url,
+    external: true,
+  };
+}
+
+export function assignmentToCalendarItem(assignment: Assignment, courseId: number): CalendarItem {
+  return {
+    id: `assignment-${assignment.id}`,
+    title: assignment.name,
+    start_at: assignment.due_at as string,
+    kind: assignment.is_quiz_assignment ? "quiz" : "assignment",
+    href: `/courses/${courseId}/assignments/${assignment.id}`,
+    external: false,
+  };
 }

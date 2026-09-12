@@ -2,8 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionUserId } from "@/lib/session";
 import { getDecryptedCredentialsForUser } from "@/lib/credentials";
+import { getHiddenCourseIds } from "@/lib/hidden-courses";
 import { listCourses } from "@/lib/canvas/courses";
-import { listCalendarEvents, isoDate } from "@/lib/canvas/calendar";
+import { listCalendarEvents, isoDate, eventToCalendarItem, assignmentToCalendarItem } from "@/lib/canvas/calendar";
+import { listAssignmentsInRange } from "@/lib/canvas/assignments";
+import type { CalendarItem } from "@/lib/canvas/types";
 import { MonthCalendar } from "@/components/month-calendar";
 import { Button } from "@/components/ui/button";
 
@@ -43,11 +46,18 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   const monthStart = new Date(year, month - 1, 1);
   const monthEnd = new Date(year, month, 0);
 
-  const courses = await listCourses(credentials);
-  const events = await listCalendarEvents(credentials, courses, {
-    startDate: isoDate(monthStart),
-    endDate: isoDate(monthEnd),
-  });
+  const [courses, hiddenIds] = await Promise.all([listCourses(credentials), getHiddenCourseIds(userId)]);
+  const visibleCourses = courses.filter((course) => !hiddenIds.has(String(course.id)));
+
+  const [events, assignmentsInRange] = await Promise.all([
+    listCalendarEvents(credentials, visibleCourses, { startDate: isoDate(monthStart), endDate: isoDate(monthEnd) }),
+    listAssignmentsInRange(credentials, visibleCourses, { start: monthStart, end: monthEnd }),
+  ]);
+
+  const items: CalendarItem[] = [
+    ...events.filter((event) => event.start_at != null).map(eventToCalendarItem),
+    ...assignmentsInRange.map(({ assignment, courseId }) => assignmentToCalendarItem(assignment, courseId)),
+  ];
 
   const prevDate = new Date(year, month - 2, 1);
   const nextDate = new Date(year, month, 1);
@@ -76,7 +86,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
           </Link>
         </div>
       </div>
-      <MonthCalendar year={year} month={month} events={events} />
+      <MonthCalendar year={year} month={month} items={items} />
     </div>
   );
 }

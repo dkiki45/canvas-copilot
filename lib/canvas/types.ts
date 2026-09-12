@@ -21,6 +21,7 @@ export interface Assignment {
   html_url: string;
   course_id: number;
   attachments?: CanvasAttachment[];
+  is_quiz_assignment?: boolean;
 }
 
 export type AssignmentDetail = Assignment;
@@ -70,4 +71,17 @@ export interface DeadlineItem {
   courseId: number;
   courseName: string;
   submission: Submission | null;
+}
+
+export type CalendarItemKind = "event" | "assignment" | "quiz";
+
+/** Item normalizado que o MonthCalendar consome, misturando eventos reais e prazos de atividades. */
+export interface CalendarItem {
+  id: string;
+  title: string;
+  start_at: string;
+  kind: CalendarItemKind;
+  href: string;
+  /** true = link externo pro Canvas (target=_blank); false = rota interna do app. */
+  external: boolean;
 }
