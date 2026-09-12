@@ -4,9 +4,11 @@ import { getSessionUserId } from "@/lib/session";
 import { getDecryptedCredentialsForUser } from "@/lib/credentials";
 import { getGradesForCourse } from "@/lib/canvas/enrollments";
 import { listAssignmentsForCourse } from "@/lib/canvas/assignments";
-import { listCourseFiles } from "@/lib/canvas/files";
+import { listCourseFilesGrouped } from "@/lib/canvas/files";
 import { recordCourseVisit } from "@/lib/course-visits";
 import { GradeTable } from "@/components/grade-table";
+import { CourseFiles } from "@/components/course-files";
+import type { GroupedCourseFiles } from "@/lib/canvas/types";
 
 export default async function CourseDetailPage({ params }: { params: Promise<{ courseId: string }> }) {
   const { courseId } = await params;
@@ -19,10 +21,11 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ c
 
   await recordCourseVisit(userId, courseId);
 
+  const emptyFiles: GroupedCourseFiles = { highlighted: [], groups: [] };
   const [enrollments, assignments, files] = await Promise.all([
     getGradesForCourse(credentials, Number(courseId)),
     listAssignmentsForCourse(credentials, Number(courseId)),
-    listCourseFiles(credentials, Number(courseId)).catch(() => []),
+    listCourseFilesGrouped(credentials, Number(courseId)).catch(() => emptyFiles),
   ]);
 
   return (
@@ -34,24 +37,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ c
 
       <section className="flex flex-col gap-4">
         <h2 className="text-xl font-semibold">Arquivos</h2>
-        {files.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhum arquivo disponível.</p>
-        ) : (
-          <ul className="flex flex-col gap-1">
-            {files.map((file) => (
-              <li key={file.id}>
-                <a
-                  href={file.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-primary hover:underline"
-                >
-                  {file.display_name}
-                </a>
-              </li>
-            ))}
-          </ul>
-        )}
+        <CourseFiles grouped={files} />
       </section>
 
       <section className="flex flex-col gap-4">

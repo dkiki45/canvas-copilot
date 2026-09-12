@@ -33,6 +33,25 @@ export interface CanvasAttachment {
   url: string;
   size: number;
   content_type: string;
+  folder_id?: number;
+}
+
+export interface CourseFolder {
+  id: number;
+  name: string;
+  full_name: string;
+  parent_folder_id: number | null;
+}
+
+export interface CourseFileGroup {
+  folderName: string;
+  files: CanvasAttachment[];
+}
+
+export interface GroupedCourseFiles {
+  /** Arquivos como Plano de Ensino/Ementa, destacados fora da estrutura de pastas. */
+  highlighted: CanvasAttachment[];
+  groups: CourseFileGroup[];
 }
 
 export interface CalendarEvent {

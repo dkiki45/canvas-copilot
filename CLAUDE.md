@@ -46,17 +46,35 @@ e a experiência de login/segurança antes de somar custo variável de IA.
 
 Funcionalidades da Fase 1:
 
-- [ ] Onboarding: aluno insere URL da instituição + token, token é criptografado e salvo
-- [ ] Listar cursos do semestre atual (`GET /courses`)
-- [ ] Painel com lista de tarefas pendentes (`GET /users/self/todo`)
-- [ ] Visualização de calendário/prazos (`GET /calendar_events`)
-- [ ] Ver notas lançadas por curso (`GET /courses/:id/enrollments`)
-- [ ] Ver detalhe de uma atividade: descrição, prazo, pontos, anexos
+- [x] Onboarding: aluno insere URL da instituição + token, token é criptografado e salvo
+- [x] Listar cursos do semestre atual (`GET /courses`), com filtro manual de cursos
+      administrativos ocultos (Biblioteca, PUC Acolhe, etc.)
+- [x] Painel com lista de pendências cruzando todos os cursos (atrasadas + próximos 30 dias)
+- [x] Visualização de calendário/prazos em grade de mês (`GET /calendar_events` + prazos de
+      atividades/provas vindos de `GET /courses/:id/assignments`)
+- [x] Ver notas lançadas por curso (`GET /courses/:id/enrollments`)
+- [x] Ver arquivos do curso, tipo Plano de Ensino (`GET /courses/:id/files`) — extra, não
+      estava no escopo original, adicionado a pedido
+- [x] Ver detalhe de uma atividade: descrição, prazo, pontos, anexos
       (`GET /courses/:id/assignments/:id`)
-- [ ] Checar status de entrega de uma atividade (`GET .../submissions/self`)
-- [ ] Baixar anexo de uma atividade (download direto do arquivo, sem processar conteúdo)
-- [ ] Enviar arquivo de entrega manualmente, sempre por ação explícita do aluno no
-      próprio app (upload de arquivo → clique em "Enviar" → `POST .../submissions`)
+- [x] Checar status de entrega de uma atividade (`GET .../submissions/self`)
+- [x] Baixar anexo de uma atividade (download direto do arquivo, sem processar conteúdo)
+- [x] Enviar arquivo de entrega manualmente, sempre por ação explícita do aluno no
+      próprio app (upload de arquivo → clique em "Enviar" → `POST .../submissions`) —
+      **implementado no código, mas nunca testado de ponta a ponta.** Ver aviso abaixo.
+
+### ⚠️ Aviso: nunca testar o envio de entrega com uma conta real de aluno
+
+O fluxo de "Enviar entrega" (`app/api/canvas/submit/route.ts`) faz o envio de verdade pro
+Canvas da instituição — se testado com o token real de um aluno, o arquivo chega de fato na
+caixa de correção do professor da turma, como uma entrega oficial. Isso não é reversível de
+forma trivial (o aluno precisaria pedir pro professor desconsiderar/apagar manualmente).
+
+Por isso: **não testar esse fluxo com uma conta real**, nem para "só ver se funciona". Se
+precisar validar o código, revisar a implementação estaticamente (lint/build/leitura do código)
+é suficiente; testar de ponta a ponta só faria sentido com uma conta de teste/sandbox do Canvas
+que não pertença a uma turma real com professor de verdade — e mesmo assim, confirmar com o
+usuário antes.
 
 Fora de escopo na Fase 1 (não implementar ainda): qualquer resumo/interpretação de PDF,
 qualquer chat em linguagem natural, qualquer geração de texto, pagamento/assinatura,
