@@ -1,14 +1,17 @@
 import { redirect } from "next/navigation";
+import { BookOpen, GraduationCap, ListTodo } from "lucide-react";
 import { getSessionUserId } from "@/lib/session";
 import { getDecryptedCredentialsForUser } from "@/lib/credentials";
 import { getHiddenCourseIds } from "@/lib/hidden-courses";
 import { getRecentCourseIds } from "@/lib/course-visits";
 import { listCourses } from "@/lib/canvas/courses";
-import { getDeadlinesInRange, isSubmitted, daysFromNow } from "@/lib/canvas/deadlines";
+import { getDeadlinesInRange, isSubmitted, daysFromNow, countUrgentDeadlines } from "@/lib/canvas/deadlines";
 import { getConsolidatedGrades, computeAverageCurrentScore } from "@/lib/canvas/grades";
 import { RecentCourseCard } from "@/components/recent-course-card";
 import { DeadlineItem } from "@/components/deadline-item";
 import { GradesSummaryTable } from "@/components/grades-summary-table";
+import { UrgentBanner } from "@/components/urgent-banner";
+import { StatTile } from "@/components/stat-tile";
 
 const PENDING_WINDOW_DAYS = 30;
 
@@ -36,10 +39,32 @@ export default async function PainelPage() {
   ]);
   const pending = deadlines.filter((item) => !isSubmitted(item));
   const averageScore = computeAverageCurrentScore(gradeSummaries);
+  const { overdueCount, dueSoonCount } = countUrgentDeadlines(pending);
 
   return (
     <div className="flex flex-col gap-8">
       <h1 className="text-2xl font-semibold">Painel</h1>
+
+      <UrgentBanner overdueCount={overdueCount} dueSoonCount={dueSoonCount} />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatTile
+          label="Cursos ativos"
+          value={String(visibleCourses.length)}
+          icon={BookOpen}
+        />
+        <StatTile
+          label="Pendências (30 dias)"
+          value={String(pending.length)}
+          icon={ListTodo}
+          tone={overdueCount > 0 ? "critical" : pending.length > 0 ? "warning" : "good"}
+        />
+        <StatTile
+          label="Média geral"
+          value={averageScore != null ? averageScore.toFixed(1) : "—"}
+          icon={GraduationCap}
+        />
+      </div>
 
       {recentCourses.length > 0 && (
         <section className="flex flex-col gap-3">

@@ -73,3 +73,24 @@ export function startOfToday(): Date {
 export function daysFromNow(days: number): Date {
   return new Date(Date.now() + days * 24 * 60 * 60 * 1000);
 }
+
+/** dias a partir do início de hoje (00:00), em vez de a partir do instante atual. */
+export function daysFromToday(days: number): Date {
+  return new Date(startOfToday().getTime() + days * 24 * 60 * 60 * 1000);
+}
+
+/** Quantas pendências já passaram do prazo e quantas vencem hoje ou amanhã. */
+export function countUrgentDeadlines(pending: DeadlineItem[]): { overdueCount: number; dueSoonCount: number } {
+  const todayStart = startOfToday().getTime();
+  const dueSoonCutoff = daysFromToday(2).getTime();
+
+  let overdueCount = 0;
+  let dueSoonCount = 0;
+  for (const item of pending) {
+    const dueTime = new Date(item.assignment.due_at as string).getTime();
+    if (dueTime < todayStart) overdueCount++;
+    else if (dueTime < dueSoonCutoff) dueSoonCount++;
+  }
+
+  return { overdueCount, dueSoonCount };
+}
