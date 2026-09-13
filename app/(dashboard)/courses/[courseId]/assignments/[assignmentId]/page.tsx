@@ -1,11 +1,15 @@
 import { redirect } from "next/navigation";
 import { getSessionUserId } from "@/lib/session";
-import { getDecryptedCredentialsForUser } from "@/lib/credentials";
+import { getDecryptedCredentialsForUser, withAuthGuard } from "@/lib/credentials";
+import { isAssignmentOverridden } from "@/lib/assignment-overrides";
 import { getAssignment } from "@/lib/canvas/assignments";
 import { getSubmissionSelf } from "@/lib/canvas/submissions";
 import { sanitizeAssignmentDescription } from "@/lib/canvas/sanitize-description";
 import { SubmissionStatusBadge } from "@/components/submission-status-badge";
 import { SubmitForm } from "./submit-form";
+import { GroupOverrideControl } from "./group-override-control";
+
+const DELIVERED_STATES = new Set(["submitted", "graded", "pending_review"]);
 
 export default async function AssignmentDetailPage({
   params,
@@ -20,10 +24,15 @@ export default async function AssignmentDetailPage({
   const credentials = await getDecryptedCredentialsForUser(userId);
   if (!credentials) redirect("/onboarding");
 
-  const [assignment, submission] = await Promise.all([
-    getAssignment(credentials, Number(courseId), Number(assignmentId)),
-    getSubmissionSelf(credentials, Number(courseId), Number(assignmentId)),
-  ]);
+  const [assignment, submission, isOverridden] = await withAuthGuard(userId, () =>
+    Promise.all([
+      getAssignment(credentials, Number(courseId), Number(assignmentId)),
+      getSubmissionSelf(credentials, Number(courseId), Number(assignmentId)),
+      isAssignmentOverridden(userId, assignmentId),
+    ]),
+  );
+
+  const isDelivered = DELIVERED_STATES.has(submission.workflow_state);
 
   return (
     <div className="flex flex-col gap-6">
@@ -59,6 +68,14 @@ export default async function AssignmentDetailPage({
             ))}
           </ul>
         </section>
+      )}
+
+      {!isDelivered && (
+        <GroupOverrideControl
+          courseId={Number(courseId)}
+          assignmentId={Number(assignmentId)}
+          isOverridden={isOverridden}
+        />
       )}
 
       <section className="flex flex-col gap-3">

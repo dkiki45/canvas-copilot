@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSessionUserId } from "@/lib/session";
-import { getDecryptedCredentialsForUser } from "@/lib/credentials";
+import { getDecryptedCredentialsForUser, withAuthGuard } from "@/lib/credentials";
 import { getHiddenCourseIds } from "@/lib/hidden-courses";
 import { listCourses } from "@/lib/canvas/courses";
 import { CourseCard } from "@/components/course-card";
@@ -13,7 +13,9 @@ export default async function CoursesPage() {
   const credentials = await getDecryptedCredentialsForUser(userId);
   if (!credentials) redirect("/onboarding");
 
-  const [courses, hiddenIds] = await Promise.all([listCourses(credentials), getHiddenCourseIds(userId)]);
+  const [courses, hiddenIds] = await withAuthGuard(userId, () =>
+    Promise.all([listCourses(credentials), getHiddenCourseIds(userId)]),
+  );
 
   const visibleCourses = courses.filter((course) => !hiddenIds.has(String(course.id)));
   const hiddenCourses = courses.filter((course) => hiddenIds.has(String(course.id)));

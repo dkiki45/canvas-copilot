@@ -59,3 +59,23 @@ export const courseVisits = pgTable(
   },
   (t) => [unique().on(t.userId, t.canvasCourseId)],
 );
+
+/**
+ * Marca uma atividade como "já resolvida" mesmo que o Canvas ainda mostre
+ * como não entregue — caso comum em trabalho de grupo, quando outro membro
+ * enviou pela conta dele e o Canvas não reflete isso na conta deste aluno.
+ * É só uma anotação local, não afeta o status real no Canvas.
+ */
+export const assignmentOverrides = pgTable(
+  "assignment_overrides",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    canvasCourseId: text("canvas_course_id").notNull(),
+    canvasAssignmentId: text("canvas_assignment_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [unique().on(t.userId, t.canvasAssignmentId)],
+);

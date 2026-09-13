@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionUserId } from "@/lib/session";
-import { getDecryptedCredentialsForUser } from "@/lib/credentials";
+import { getDecryptedCredentialsForUser, withAuthGuard } from "@/lib/credentials";
 import { getHiddenCourseIds } from "@/lib/hidden-courses";
 import { listCourses } from "@/lib/canvas/courses";
 import { listCalendarEvents, isoDate, eventToCalendarItem, assignmentToCalendarItem } from "@/lib/canvas/calendar";
@@ -46,13 +46,17 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   const monthStart = new Date(year, month - 1, 1);
   const monthEnd = new Date(year, month, 0);
 
-  const [courses, hiddenIds] = await Promise.all([listCourses(credentials), getHiddenCourseIds(userId)]);
+  const [courses, hiddenIds] = await withAuthGuard(userId, () =>
+    Promise.all([listCourses(credentials), getHiddenCourseIds(userId)]),
+  );
   const visibleCourses = courses.filter((course) => !hiddenIds.has(String(course.id)));
 
-  const [events, assignmentsInRange] = await Promise.all([
-    listCalendarEvents(credentials, visibleCourses, { startDate: isoDate(monthStart), endDate: isoDate(monthEnd) }),
-    listAssignmentsInRange(credentials, visibleCourses, { start: monthStart, end: monthEnd }),
-  ]);
+  const [events, assignmentsInRange] = await withAuthGuard(userId, () =>
+    Promise.all([
+      listCalendarEvents(credentials, visibleCourses, { startDate: isoDate(monthStart), endDate: isoDate(monthEnd) }),
+      listAssignmentsInRange(credentials, visibleCourses, { start: monthStart, end: monthEnd }),
+    ]),
+  );
 
   const items: CalendarItem[] = [
     ...events.filter((event) => event.start_at != null).map(eventToCalendarItem),

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionUserId } from "@/lib/session";
-import { getDecryptedCredentialsForUser } from "@/lib/credentials";
+import { getDecryptedCredentialsForUser, withAuthGuard } from "@/lib/credentials";
 import { getGradesForCourse } from "@/lib/canvas/enrollments";
 import { listAssignmentsForCourse } from "@/lib/canvas/assignments";
 import { listCourseFilesGrouped } from "@/lib/canvas/files";
@@ -22,11 +22,13 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ c
   await recordCourseVisit(userId, courseId);
 
   const emptyFiles: GroupedCourseFiles = { highlighted: [], groups: [] };
-  const [enrollments, assignments, files] = await Promise.all([
-    getGradesForCourse(credentials, Number(courseId)),
-    listAssignmentsForCourse(credentials, Number(courseId)),
-    listCourseFilesGrouped(credentials, Number(courseId)).catch(() => emptyFiles),
-  ]);
+  const [enrollments, assignments, files] = await withAuthGuard(userId, () =>
+    Promise.all([
+      getGradesForCourse(credentials, Number(courseId)),
+      listAssignmentsForCourse(credentials, Number(courseId)),
+      listCourseFilesGrouped(credentials, Number(courseId)).catch(() => emptyFiles),
+    ]),
+  );
 
   return (
     <div className="flex flex-col gap-8">

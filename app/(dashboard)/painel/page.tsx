@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
 import { BookOpen, GraduationCap, ListTodo } from "lucide-react";
 import { getSessionUserId } from "@/lib/session";
-import { getDecryptedCredentialsForUser } from "@/lib/credentials";
+import { getDecryptedCredentialsForUser, withAuthGuard } from "@/lib/credentials";
 import { getHiddenCourseIds } from "@/lib/hidden-courses";
 import { getRecentCourseIds } from "@/lib/course-visits";
+import { getOverriddenAssignmentIds } from "@/lib/assignment-overrides";
 import { listCourses } from "@/lib/canvas/courses";
 import { getDeadlinesInRange, isSubmitted, daysFromNow, countUrgentDeadlines } from "@/lib/canvas/deadlines";
 import { getConsolidatedGrades, computeAverageCurrentScore } from "@/lib/canvas/grades";
@@ -22,10 +23,11 @@ export default async function PainelPage() {
   const credentials = await getDecryptedCredentialsForUser(userId);
   if (!credentials) redirect("/onboarding");
 
-  const [courses, hiddenIds, recentIds] = await Promise.all([
-    listCourses(credentials),
+  const [courses, hiddenIds, recentIds, overriddenIds] = await Promise.all([
+    withAuthGuard(userId, () => listCourses(credentials)),
     getHiddenCourseIds(userId),
     getRecentCourseIds(userId, 3),
+    getOverriddenAssignmentIds(userId),
   ]);
 
   const visibleCourses = courses.filter((course) => !hiddenIds.has(String(course.id)));
@@ -33,13 +35,17 @@ export default async function PainelPage() {
     .map((id) => visibleCourses.find((course) => String(course.id) === id))
     .filter((course) => course != null);
 
-  const [deadlines, gradeSummaries] = await Promise.all([
-    getDeadlinesInRange(credentials, visibleCourses, { start: null, end: daysFromNow(PENDING_WINDOW_DAYS) }),
-    getConsolidatedGrades(credentials, visibleCourses),
-  ]);
-  const pending = deadlines.filter((item) => !isSubmitted(item));
+  const [deadlines, gradeSummaries] = await withAuthGuard(userId, () =>
+    Promise.all([
+      getDeadlinesInRange(credentials, visibleCourses, { start: null, end: daysFromNow(PENDING_WINDOW_DAYS) }),
+      getConsolidatedGrades(credentials, visibleCourses),
+    ]),
+  );
+  const futureTasks = deadlines.filter(
+    (item) => !isSubmitted(item) && !overriddenIds.has(String(item.assignment.id)),
+  );
   const averageScore = computeAverageCurrentScore(gradeSummaries);
-  const { overdueCount, dueSoonCount } = countUrgentDeadlines(pending);
+  const { overdueCount, dueSoonCount } = countUrgentDeadlines(futureTasks);
 
   return (
     <div className="flex flex-col gap-8">
@@ -48,16 +54,12 @@ export default async function PainelPage() {
       <UrgentBanner overdueCount={overdueCount} dueSoonCount={dueSoonCount} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatTile label="Cursos ativos" value={String(visibleCourses.length)} icon={BookOpen} />
         <StatTile
-          label="Cursos ativos"
-          value={String(visibleCourses.length)}
-          icon={BookOpen}
-        />
-        <StatTile
-          label="Pendências (30 dias)"
-          value={String(pending.length)}
+          label="Tarefas futuras (30 dias)"
+          value={String(futureTasks.length)}
           icon={ListTodo}
-          tone={overdueCount > 0 ? "critical" : pending.length > 0 ? "warning" : "good"}
+          tone={overdueCount > 0 ? "critical" : futureTasks.length > 0 ? "warning" : "good"}
         />
         <StatTile
           label="Média geral"
@@ -78,12 +80,12 @@ export default async function PainelPage() {
       )}
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-medium">Pendências</h2>
-        {pending.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhuma pendência. 🎉</p>
+        <h2 className="text-lg font-medium">Tarefas futuras</h2>
+        {futureTasks.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhuma tarefa futura. 🎉</p>
         ) : (
           <div className="flex flex-col gap-2">
-            {pending.map((item) => (
+            {futureTasks.map((item) => (
               <DeadlineItem key={`${item.courseId}-${item.assignment.id}`} item={item} />
             ))}
           </div>
